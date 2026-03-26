@@ -1,56 +1,80 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Symptom Checker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-        body { font-family: sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; }
-        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
-        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
-        button { width: 95%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f9f9f9; text-align: left; font-size: 14px; white-space: pre-wrap; min-height: 50px; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 12px; background-color: #00c853; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        button:hover { background-color: #00a040; }
+        #status { margin-top: 20px; font-weight: bold; min-height: 40px; color: #333; }
+        .disclaimer { font-size: 11px; color: #888; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>Symptom Checker</h2>
-        <input type="text" id="userInput" placeholder="Try 'fever' or 'cough'">
-        <button onclick="startCheck()">Check Health</button>
-        <div id="result">Results will appear here...</div>
-    </div>
+
+<div class="card">
+    <h2>Symptom Checker</h2>
+    <p>Type a symptom (e.g., <b>fever</b>)</p>
+    <input type="text" id="symptomInput" placeholder="How are you feeling?">
+    <button onclick="checkHealth()">Check Health</button>
+    <div id="status">Ready</div>
+    <div class="disclaimer">NOT MEDICAL ADVICE. This is a demo app. Always consult a doctor.</div>
+</div>
 
 <script>
-async function startCheck() {
-    const symptom = document.getElementById('userInput').value.trim();
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = "Processing...";
+async function checkHealth() {
+    const symptom = document.getElementById('symptomInput').value.trim().toLowerCase();
+    const statusDiv = document.getElementById('status');
+    
+    if (!symptom) {
+        statusDiv.innerHTML = "Please enter a symptom.";
+        return;
+    }
+
+    statusDiv.innerHTML = "Connecting to Medical Brain...";
 
     const apiKey = 'ceb95beddfmshb2f8f87763e1a5ep1fd654jsnb519fc596a45';
-    const apiHost = 'endlessmedicalapi1.p.rapidapi.com';
-    const headers = { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': apiHost };
+    const host = 'endlessmedicalapi1.p.rapidapi.com';
+
+    const headers = {
+        'x-rapidapi-key': apiKey,
+        'x-rapidapi-host': host
+    };
 
     try {
-        const res1 = await fetch(`https://${apiHost}/InitSession`, { method: 'GET', headers: headers });
-        const data1 = await res1.json();
-        const sid = data1.SessionID;
+        // 1. Start Session
+        const res1 = await fetch(`https://${host}/InitSession`, { headers });
+        if (!res1.ok) throw new Error("Subscription not active on RapidAPI.");
+        const { SessionID } = await res1.json();
 
+        // 2. Accept Terms
         const terms = encodeURIComponent("I have read, understood and I agree to the Terms of Use. To help our reach, I also agree to use my data for research purposes.");
-        await fetch(`https://${apiHost}/AcceptTermsOfUse?SessionID=${sid}&passphrase=${terms}`, { method: 'POST', headers: headers });
+        await fetch(`https://${host}/AcceptTermsOfUse?SessionID=${SessionID}&passphrase=${terms}`, { method: 'POST', headers });
 
-        await fetch(`https://${apiHost}/UpdateFeature?SessionID=${sid}&name=${symptom}&value=5`, { method: 'POST', headers: headers });
+        // 3. Update Symptom
+        await fetch(`https://${host}/UpdateFeature?SessionID=${SessionID}&name=${symptom}&value=5`, { method: 'POST', headers });
 
-        const res4 = await fetch(`https://${apiHost}/GetOutcomes?SessionID=${sid}`, { method: 'GET', headers: headers });
+        // 4. Get Diagnosis
+        const res4 = await fetch(`https://${host}/GetOutcomes?SessionID=${SessionID}`, { headers });
         const data4 = await res4.json();
 
-        if (data4.Outcomes && data4.Outcomes.length > 0) {
+        if (data4.status === "ok" && data4.Outcomes && data4.Outcomes.length > 0) {
             const diagnosis = Object.keys(data4.Outcomes[0])[0];
-            resultDiv.innerHTML = "<b>Possible Cause:</b><br>" + diagnosis;
+            statusDiv.innerHTML = `<span style="color: #d32f2f">Possible Issue:</span><br>${diagnosis}`;
         } else {
-            resultDiv.innerHTML = "No matches found. Try 'fever'.";
+            statusDiv.innerHTML = "No clear match. Try 'fever' or 'cough'.";
         }
+
     } catch (err) {
-        resultDiv.innerHTML = "Error: " + err.message;
+        statusDiv.innerHTML = `<span style="color: red;">Error: ${err.message}</span><br><small>Tip: Check your RapidAPI subscription status.</small>`;
+        console.error(err);
     }
 }
 </script>
+
 </body>
 </html>
