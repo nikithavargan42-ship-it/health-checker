@@ -8,7 +8,7 @@
         .card { background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; }
         textarea { width: 100%; height: 100px; padding: 15px; border: 1.5px solid #ddd; border-radius: 12px; font-size: 16px; box-sizing: border-box; resize: none; outline: none; }
         button { width: 100%; padding: 15px; background: #0984e3; color: white; border: none; border-radius: 12px; font-size: 18px; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        #response { margin-top: 25px; text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 5px solid #0984e3; white-space: pre-wrap; display: none; }
+        #response { margin-top: 25px; text-align: left; background: #f8f9fa; padding: 20px; border-radius: 12px; border-left: 5px solid #0984e3; white-space: pre-wrap; display: none; line-height: 1.6; }
         .disclaimer { font-size: 11px; color: #b2bec3; margin-top: 25px; }
     </style>
 </head>
@@ -16,7 +16,7 @@
 
 <div class="card">
     <h1>AI Health Check</h1>
-    <textarea id="userInput" placeholder="Describe symptoms..."></textarea>
+    <textarea id="userInput" placeholder="How are you feeling? (e.g. I have a stomach ache)"></textarea>
     <button id="btn" onclick="askAI()">Analyze Symptoms</button>
     <div id="response"></div>
     <div class="disclaimer">🚨 Disclaimer: This is an AI tool. Not medical advice. Call 911 for emergencies.</div>
@@ -33,21 +33,22 @@ async function askAI() {
         return;
     }
 
-    // THE KEY MUST BE INSIDE QUOTES ' '
     const GEMINI_API_KEY = 'AIzaSyBVjErp0PcSntyosHi71_WoiE5k6pStuDw'; 
 
-    btn.innerText = "Analyzing... please wait";
+    btn.innerText = "Analyzing...";
     btn.disabled = true;
     responseDiv.style.display = "block";
-    responseDiv.innerText = "Connecting to Google AI...";
+    responseDiv.innerText = "Thinking...";
 
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        // CHANGED v1beta to v1 below to fix the error
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+        
         const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: "Analyze these symptoms briefly: " + input }] }]
+                contents: [{ parts: [{ text: "You are a health assistant. Analyze these symptoms clearly and give advice: " + input }] }]
             })
         });
 
@@ -56,6 +57,7 @@ async function askAI() {
         if (data.error) {
             responseDiv.innerText = "Google Error: " + data.error.message;
         } else {
+            // This is the part that shows the answer on the screen
             responseDiv.innerText = data.candidates[0].content.parts[0].text;
         }
 
