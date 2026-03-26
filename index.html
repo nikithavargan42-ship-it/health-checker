@@ -2,75 +2,93 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Symptom Checker</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instant Symptom Checker</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 12px; background-color: #00c853; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; }
-        #status { margin-top: 20px; font-weight: bold; min-height: 40px; color: #333; word-wrap: break-word; }
-        .disclaimer { font-size: 11px; color: #888; margin-top: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
+        h1 { color: #2c3e50; font-size: 24px; }
+        select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
+        button { background: #00b894; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background: #009475; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 10px; display: none; text-align: left; line-height: 1.5; }
+        .warning { background: #ffeaa7; color: #d63031; border-left: 5px solid #d63031; }
+        .info { background: #dfe6e9; color: #2d3436; border-left: 5px solid #0984e3; }
+        .emergency { color: white; background: #ff7675; font-weight: bold; padding: 10px; border-radius: 5px; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h2>Symptom Checker</h2>
-    <p>Type a symptom (e.g., <b>fever</b>)</p>
-    <input type="text" id="symptomInput" placeholder="How are you feeling?">
-    <button onclick="checkHealth()">Check Health</button>
-    <div id="status">Ready</div>
-    <div class="disclaimer">NOT MEDICAL ADVICE. demo app.</div>
+    <h1>Symptom Checker</h1>
+    <p>What is your main symptom?</p>
+    
+    <select id="symptomSelect">
+        <option value="">-- Select a Symptom --</option>
+        <option value="fever">Fever</option>
+        <option value="cough">Cough</option>
+        <option value="headache">Headache</option>
+        <option value="stomach">Stomach Pain</option>
+        <option value="sorethroat">Sore Throat</option>
+        <option value="fatigue">Extreme Tiredness</option>
+    </select>
+
+    <button onclick="checkSymptom()">Check Now</button>
+
+    <div id="result"></div>
+
+    <div class="emergency">
+        🚨 If you have chest pain or trouble breathing, call 911 immediately.
+    </div>
 </div>
 
 <script>
-async function checkHealth() {
-    const symptom = document.getElementById('symptomInput').value.trim().toLowerCase();
-    const statusDiv = document.getElementById('status');
-    
-    if (!symptom) { statusDiv.innerHTML = "Please enter a symptom."; return; }
-    statusDiv.innerHTML = "Talking to the brain... please wait.";
-
-    // These MUST match your RapidAPI dashboard
-    const apiKey = 'ceb95beddfmshb2f8f87763e1a5ep1fd654jsnb519fc596a45';
-    const host = 'endlessmedicalapi1.p.rapidapi.com'; 
-
-    const headers = {
-        'x-rapidapi-key': apiKey,
-        'x-rapidapi-host': host
+    // This is our built-in "Medical Brain"
+    const medicalData = {
+        "fever": {
+            cause: "Common Cold, Flu, or Infection",
+            advice: "Rest, drink plenty of fluids, and monitor your temperature. If it goes above 103°F (39.4°C), see a doctor."
+        },
+        "cough": {
+            cause: "Respiratory Infection or Allergies",
+            advice: "Stay hydrated and try honey for the throat. If you have a high fever or yellow/green mucus, visit a clinic."
+        },
+        "headache": {
+            cause: "Stress, Dehydration, or Tension",
+            advice: "Drink water, rest in a dark room. If it is a 'sudden worst headache of your life,' seek emergency care."
+        },
+        "stomach": {
+            cause: "Indigestion or Food Sensitivity",
+            advice: "Eat bland foods (toast, rice). If the pain is sharp and on the lower right side, it could be appendicitis—see a doctor."
+        },
+        "sorethroat": {
+            cause: "Viral Infection or Strep Throat",
+            advice: "Gargle with salt water. If you see white spots in the back of your throat, you may need antibiotics."
+        },
+        "fatigue": {
+            cause: "Lack of sleep, Anemia, or Stress",
+            advice: "Ensure 8 hours of sleep and a healthy diet. If it lasts more than 2 weeks, get a blood test."
+        }
     };
 
-    try {
-        // --- STEP 1: GET SESSION ---
-        const res1 = await fetch(`https://${host}/InitSession`, { headers });
-        if (!res1.ok) throw new Error(`API Connection Failed (Status: ${res1.status}). check your RapidAPI subscription.`);
-        const data1 = await res1.json();
-        const SessionID = data1.SessionID;
+    function checkSymptom() {
+        const selection = document.getElementById('symptomSelect').value;
+        const resultDiv = document.getElementById('result');
 
-        // --- STEP 2: ACCEPT TERMS ---
-        const terms = encodeURIComponent("I have read, understood and I agree to the Terms of Use. To help our reach, I also agree to use my data for research purposes.");
-        await fetch(`https://${host}/AcceptTermsOfUse?SessionID=${SessionID}&passphrase=${terms}`, { method: 'POST', headers });
-
-        // --- STEP 3: SEND SYMPTOM ---
-        await fetch(`https://${host}/UpdateFeature?SessionID=${SessionID}&name=${symptom}&value=5`, { method: 'POST', headers });
-
-        // --- STEP 4: GET DIAGNOSIS ---
-        const res4 = await fetch(`https://${host}/GetOutcomes?SessionID=${SessionID}`, { headers });
-        const data4 = await res4.json();
-
-        if (data4.status === "ok" && data4.Outcomes && data4.Outcomes.length > 0) {
-            const diagnosis = Object.keys(data4.Outcomes[0])[0];
-            statusDiv.innerHTML = `<span style="color: #d32f2f">Possible Issue:</span><br>${diagnosis}`;
-        } else {
-            statusDiv.innerHTML = "No match found. Try 'cough' or 'fever'.";
+        if (selection === "") {
+            alert("Please select a symptom!");
+            return;
         }
 
-    } catch (err) {
-        // This will now tell you EXACTLY why it failed instead of giving the '<' error
-        statusDiv.innerHTML = `<span style="color: red;">Error:</span> ${err.message}`;
+        const data = medicalData[selection];
+        resultDiv.style.display = "block";
+        resultDiv.className = "info";
+        resultDiv.innerHTML = `
+            <strong>Potential Cause:</strong> ${data.cause}<br><br>
+            <strong>What to do:</strong> ${data.advice}
+        `;
     }
-}
 </script>
+
 </body>
 </html>
