@@ -9,8 +9,7 @@
         .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
         input { width: 100%; padding: 12px; margin: 15px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 12px; background-color: #00c853; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 18px; font-weight: bold; }
-        button:hover { background-color: #00a040; }
-        #status { margin-top: 20px; font-weight: bold; min-height: 40px; color: #333; }
+        #status { margin-top: 20px; font-weight: bold; min-height: 40px; color: #333; word-wrap: break-word; }
         .disclaimer { font-size: 11px; color: #888; margin-top: 20px; }
     </style>
 </head>
@@ -22,7 +21,7 @@
     <input type="text" id="symptomInput" placeholder="How are you feeling?">
     <button onclick="checkHealth()">Check Health</button>
     <div id="status">Ready</div>
-    <div class="disclaimer">NOT MEDICAL ADVICE. This is a demo app. Always consult a doctor.</div>
+    <div class="disclaimer">NOT MEDICAL ADVICE. demo app.</div>
 </div>
 
 <script>
@@ -30,15 +29,12 @@ async function checkHealth() {
     const symptom = document.getElementById('symptomInput').value.trim().toLowerCase();
     const statusDiv = document.getElementById('status');
     
-    if (!symptom) {
-        statusDiv.innerHTML = "Please enter a symptom.";
-        return;
-    }
+    if (!symptom) { statusDiv.innerHTML = "Please enter a symptom."; return; }
+    statusDiv.innerHTML = "Talking to the brain... please wait.";
 
-    statusDiv.innerHTML = "Connecting to Medical Brain...";
-
+    // These MUST match your RapidAPI dashboard
     const apiKey = 'ceb95beddfmshb2f8f87763e1a5ep1fd654jsnb519fc596a45';
-    const host = 'endlessmedicalapi1.p.rapidapi.com';
+    const host = 'endlessmedicalapi1.p.rapidapi.com'; 
 
     const headers = {
         'x-rapidapi-key': apiKey,
@@ -46,19 +42,20 @@ async function checkHealth() {
     };
 
     try {
-        // 1. Start Session
+        // --- STEP 1: GET SESSION ---
         const res1 = await fetch(`https://${host}/InitSession`, { headers });
-        if (!res1.ok) throw new Error("Subscription not active on RapidAPI.");
-        const { SessionID } = await res1.json();
+        if (!res1.ok) throw new Error(`API Connection Failed (Status: ${res1.status}). check your RapidAPI subscription.`);
+        const data1 = await res1.json();
+        const SessionID = data1.SessionID;
 
-        // 2. Accept Terms
+        // --- STEP 2: ACCEPT TERMS ---
         const terms = encodeURIComponent("I have read, understood and I agree to the Terms of Use. To help our reach, I also agree to use my data for research purposes.");
         await fetch(`https://${host}/AcceptTermsOfUse?SessionID=${SessionID}&passphrase=${terms}`, { method: 'POST', headers });
 
-        // 3. Update Symptom
+        // --- STEP 3: SEND SYMPTOM ---
         await fetch(`https://${host}/UpdateFeature?SessionID=${SessionID}&name=${symptom}&value=5`, { method: 'POST', headers });
 
-        // 4. Get Diagnosis
+        // --- STEP 4: GET DIAGNOSIS ---
         const res4 = await fetch(`https://${host}/GetOutcomes?SessionID=${SessionID}`, { headers });
         const data4 = await res4.json();
 
@@ -66,15 +63,14 @@ async function checkHealth() {
             const diagnosis = Object.keys(data4.Outcomes[0])[0];
             statusDiv.innerHTML = `<span style="color: #d32f2f">Possible Issue:</span><br>${diagnosis}`;
         } else {
-            statusDiv.innerHTML = "No clear match. Try 'fever' or 'cough'.";
+            statusDiv.innerHTML = "No match found. Try 'cough' or 'fever'.";
         }
 
     } catch (err) {
-        statusDiv.innerHTML = `<span style="color: red;">Error: ${err.message}</span><br><small>Tip: Check your RapidAPI subscription status.</small>`;
-        console.error(err);
+        // This will now tell you EXACTLY why it failed instead of giving the '<' error
+        statusDiv.innerHTML = `<span style="color: red;">Error:</span> ${err.message}`;
     }
 }
 </script>
-
 </body>
 </html>
