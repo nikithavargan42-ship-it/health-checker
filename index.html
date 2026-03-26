@@ -1,94 +1,175 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Instant Symptom Checker</title>
+import streamlit as st
+from groq import Groq
+from PIL import Image
+
+# --- API CONFIGURATION ---
+GROQ_API_KEY = "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"
+client = Groq(api_key=GROQ_API_KEY)
+
+# --- PAGE CONFIGURATION ---
+st.set_page_config(
+    page_title="Swasthya Sahayak | AI Health Assistant",
+    page_icon="⚕️",
+    layout="wide",
+)
+
+# --- DARK MODE CSS (WHITE TEXT ON DARK BACKGROUND) ---
+st.markdown("""
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 90%; max-width: 400px; text-align: center; }
-        h1 { color: #2c3e50; font-size: 24px; }
-        select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #ddd; font-size: 16px; }
-        button { background: #00b894; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button:hover { background: #009475; }
-        #result { margin-top: 20px; padding: 15px; border-radius: 10px; display: none; text-align: left; line-height: 1.5; }
-        .warning { background: #ffeaa7; color: #d63031; border-left: 5px solid #d63031; }
-        .info { background: #dfe6e9; color: #2d3436; border-left: 5px solid #0984e3; }
-        .emergency { color: white; background: #ff7675; font-weight: bold; padding: 10px; border-radius: 5px; margin-top: 10px; }
-    </style>
-</head>
-<body>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap');
 
-<div class="card">
-    <h1>Symptom Checker</h1>
-    <p>What is your main symptom?</p>
-    
-    <select id="symptomSelect">
-        <option value="">-- Select a Symptom --</option>
-        <option value="fever">Fever</option>
-        <option value="cough">Cough</option>
-        <option value="headache">Headache</option>
-        <option value="stomach">Stomach Pain</option>
-        <option value="sorethroat">Sore Throat</option>
-        <option value="fatigue">Extreme Tiredness</option>
-    </select>
-
-    <button onclick="checkSymptom()">Check Now</button>
-
-    <div id="result"></div>
-
-    <div class="emergency">
-        🚨 If you have chest pain or trouble breathing, call 911 immediately.
-    </div>
-</div>
-
-<script>
-    // This is our built-in "Medical Brain"
-    const medicalData = {
-        "fever": {
-            cause: "Common Cold, Flu, or Infection",
-            advice: "Rest, drink plenty of fluids, and monitor your temperature. If it goes above 103°F (39.4°C), see a doctor."
-        },
-        "cough": {
-            cause: "Respiratory Infection or Allergies",
-            advice: "Stay hydrated and try honey for the throat. If you have a high fever or yellow/green mucus, visit a clinic."
-        },
-        "headache": {
-            cause: "Stress, Dehydration, or Tension",
-            advice: "Drink water, rest in a dark room. If it is a 'sudden worst headache of your life,' seek emergency care."
-        },
-        "stomach": {
-            cause: "Indigestion or Food Sensitivity",
-            advice: "Eat bland foods (toast, rice). If the pain is sharp and on the lower right side, it could be appendicitis—see a doctor."
-        },
-        "sorethroat": {
-            cause: "Viral Infection or Strep Throat",
-            advice: "Gargle with salt water. If you see white spots in the back of your throat, you may need antibiotics."
-        },
-        "fatigue": {
-            cause: "Lack of sleep, Anemia, or Stress",
-            advice: "Ensure 8 hours of sleep and a healthy diet. If it lasts more than 2 weeks, get a blood test."
-        }
-    };
-
-    function checkSymptom() {
-        const selection = document.getElementById('symptomSelect').value;
-        const resultDiv = document.getElementById('result');
-
-        if (selection === "") {
-            alert("Please select a symptom!");
-            return;
-        }
-
-        const data = medicalData[selection];
-        resultDiv.style.display = "block";
-        resultDiv.className = "info";
-        resultDiv.innerHTML = `
-            <strong>Potential Cause:</strong> ${data.cause}<br><br>
-            <strong>What to do:</strong> ${data.advice}
-        `;
+    /* Global Background and Font */
+    .stApp {
+        background-color: #0F172A !important; /* Deep Dark Background */
+        color: #FFFFFF !important; /* ALL TEXT WHITE */
+        font-family: 'Plus Jakarta Sans', sans-serif;
     }
-</script>
 
-</body>
-</html>
+    /* Force all Streamlit native text elements to White */
+    h1, h2, h3, h4, h5, h6, p, label, span, div, .stMarkdown {
+        color: #FFFFFF !important;
+    }
+
+    /* Input Fields Styling */
+    input, textarea, [data-baseweb="select"] > div {
+        background-color: #1E293B !important; /* Slightly lighter dark */
+        color: #FFFFFF !important;
+        border: 1px solid #334155 !important;
+    }
+
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] {
+        background-color: #020617 !important;
+        border-right: 1px solid #1E293B;
+    }
+    [data-testid="stSidebar"] * {
+        color: #FFFFFF !important;
+    }
+
+    /* Header Container */
+    .header-container {
+        background: #1E293B;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 25px;
+        border: 1px solid #334155;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    /* Button Styling */
+    div.stButton > button {
+        background: #2563EB !important;
+        color: #FFFFFF !important;
+        border-radius: 10px !important;
+        padding: 0.7rem 2rem !important;
+        font-weight: 700 !important;
+        border: none !important;
+        width: 100%;
+        transition: 0.3s;
+    }
+    div.stButton > button:hover {
+        background: #3B82F6 !important;
+        transform: translateY(-2px);
+    }
+
+    /* Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background-color: #1E293B !important;
+        color: #FFFFFF !important;
+        border-radius: 8px;
+        padding: 10px 20px;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #2563EB !important;
+    }
+
+    /* Health Report Box */
+    .prescription-report {
+        background: #1E293B !important;
+        border: 1px solid #3B82F6 !important;
+        border-left: 8px solid #3B82F6 !important;
+        padding: 30px;
+        border-radius: 15px;
+        color: #FFFFFF !important;
+        line-height: 1.8;
+    }
+
+    /* Spinner/Status text */
+    [data-testid="stStatusWidget"] {
+        color: white !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# --- SIDEBAR ---
+with st.sidebar:
+    st.markdown("## 👤 Patient Portal")
+    with st.expander("Personal Info", expanded=True):
+        age = st.number_input("Age", 0, 110, 25)
+        gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+        weight = st.text_input("Weight (kg)", "70")
+    
+    with st.expander("Vitals", expanded=True):
+        temp = st.text_input("Temperature (°F)", "98.6")
+        bp = st.text_input("Blood Pressure", "120/80")
+    
+    language = st.selectbox("Response Language", ["English", "Hindi", "Tamil", "Telugu", "Bengali"])
+
+# --- MAIN CONTENT ---
+st.markdown("""
+    <div class="header-container">
+        <img src="https://cdn-icons-png.flaticon.com/512/2966/2966327.png" width="50">
+        <div>
+            <h1 style="margin:0; font-size: 1.8rem; color: #FFFFFF;">Swasthya Sahayak AI</h1>
+            <p style="margin:0; color: #94A3B8;">Intelligent Healthcare Assistant for India</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+tab1, tab2, tab3 = st.tabs(["🤒 Symptoms", "📸 Dermatology", "🥗 Wellness"])
+
+with tab1:
+    symptoms_input = st.text_area("What symptoms are you experiencing?", height=150, placeholder="Describe your condition here...")
+
+with tab2:
+    c1, c2 = st.columns(2)
+    with c1: cam_image = st.camera_input("Capture Concern")
+    with c2: uploaded_file = st.file_uploader("Upload Image")
+    skin_details = st.text_input("Additional details about the skin issue")
+
+with tab3:
+    smoke = st.checkbox("History of Smoking/Drinking")
+    med_history = st.text_input("Existing conditions (Diabetes, etc.)")
+    exercise = st.select_slider("Activity Level", ["Sedentary", "Occasional", "Active", "Athlete"])
+
+# --- AI LOGIC ---
+def generate_health_report(symptoms, profile, skin_context="None"):
+    try:
+        prompt = f"Role: AI Health Assistant. Language: {profile['lang']}. Profile: {profile['age']}yo {profile['gender']}, {profile['weight']}kg. Symptoms: {symptoms}. Skin Context: {skin_context}. Generate a professional structured report including Summary, Causes, Home Care, Red Flags, and recommended specialist."
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": "Professional Medical AI."}, {"role": "user", "content": prompt}],
+            temperature=0.3
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+# --- ACTION ---
+if st.button("🚀 Analyze & Generate Report"):
+    if not symptoms_input and not skin_details:
+        st.warning("Please enter your details first.")
+    else:
+        with st.status("🔍 Analyzing...", expanded=True):
+            profile_dict = {"age": age, "gender": gender, "weight": weight, "temp": temp, "bp": bp, "lang": language}
+            report = generate_health_report(symptoms_input, profile_dict, skin_details)
+        
+        st.markdown(f"<div class='prescription-report'>{report}</div>", unsafe_allow_html=True)
+
+# --- FOOTER ---
+st.markdown("<br><hr><center style='color: white;'><b>Medical Disclaimer:</b> Information provided is for educational purposes only. Always consult a real doctor for emergencies. 🇮🇳</center>", unsafe_allow_html=True)
