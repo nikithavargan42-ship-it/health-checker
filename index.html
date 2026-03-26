@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Symptom Checker</title>
+    <style>
+        body { font-family: sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; }
+        .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; }
+        button { width: 95%; padding: 12px; background: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        #result { margin-top: 20px; padding: 15px; border-radius: 8px; background: #f9f9f9; text-align: left; font-size: 14px; white-space: pre-wrap; min-height: 50px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>Symptom Checker</h2>
+        <input type="text" id="userInput" placeholder="Try 'fever' or 'cough'">
+        <button onclick="startCheck()">Check Health</button>
+        <div id="result">Results will appear here...</div>
+    </div>
+
+<script>
+async function startCheck() {
+    const symptom = document.getElementById('userInput').value.trim();
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = "Processing...";
+
+    const apiKey = 'ceb95beddfmshb2f8f87763e1a5ep1fd654jsnb519fc596a45';
+    const apiHost = 'endlessmedicalapi1.p.rapidapi.com';
+    const headers = { 'x-rapidapi-key': apiKey, 'x-rapidapi-host': apiHost };
+
+    try {
+        const res1 = await fetch(`https://${apiHost}/InitSession`, { method: 'GET', headers: headers });
+        const data1 = await res1.json();
+        const sid = data1.SessionID;
+
+        const terms = encodeURIComponent("I have read, understood and I agree to the Terms of Use. To help our reach, I also agree to use my data for research purposes.");
+        await fetch(`https://${apiHost}/AcceptTermsOfUse?SessionID=${sid}&passphrase=${terms}`, { method: 'POST', headers: headers });
+
+        await fetch(`https://${apiHost}/UpdateFeature?SessionID=${sid}&name=${symptom}&value=5`, { method: 'POST', headers: headers });
+
+        const res4 = await fetch(`https://${apiHost}/GetOutcomes?SessionID=${sid}`, { method: 'GET', headers: headers });
+        const data4 = await res4.json();
+
+        if (data4.Outcomes && data4.Outcomes.length > 0) {
+            const diagnosis = Object.keys(data4.Outcomes[0])[0];
+            resultDiv.innerHTML = "<b>Possible Cause:</b><br>" + diagnosis;
+        } else {
+            resultDiv.innerHTML = "No matches found. Try 'fever'.";
+        }
+    } catch (err) {
+        resultDiv.innerHTML = "Error: " + err.message;
+    }
+}
+</script>
+</body>
+</html>
