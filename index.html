@@ -6,18 +6,19 @@
     <style>
         body { font-family: sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 50px; }
         .card { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 400px; text-align: center; }
-        textarea { width: 100%; height: 100px; margin: 10px 0; padding: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 18px; }
-        #response { margin-top: 20px; background: #eee; padding: 15px; border-radius: 10px; text-align: left; display: none; white-space: pre-wrap; }
+        textarea { width: 100%; height: 100px; margin: 10px 0; padding: 10px; box-sizing: border-box; border-radius: 8px; border: 1px solid #ddd; }
+        button { width: 100%; padding: 15px; background: #007bff; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 18px; font-weight: bold; }
+        #response { margin-top: 20px; background: #f9f9f9; padding: 15px; border-radius: 10px; text-align: left; display: none; white-space: pre-wrap; border-left: 5px solid #007bff; }
     </style>
 </head>
 <body>
 
 <div class="card">
     <h1>AI Health Check</h1>
-    <textarea id="userInput" placeholder="Describe your symptoms..."></textarea>
+    <textarea id="userInput" placeholder="Describe your symptoms (e.g., I have a headache and feel dizzy)..."></textarea>
     <button id="myBtn" onclick="askAI()">Analyze Symptoms</button>
     <div id="response"></div>
+    <p style="font-size: 10px; color: grey; margin-top: 15px;">DISCLAIMER: This is an AI tool. Not medical advice. Call emergency services for urgent issues.</p>
 </div>
 
 <script>
@@ -26,20 +27,13 @@ async function askAI() {
     const responseDiv = document.getElementById('response');
     const btn = document.getElementById('myBtn');
 
-    // 1. Check if input is empty
     if (!input.trim()) {
         alert("Please type your symptoms first!");
         return;
     }
 
-    // 2. YOUR API KEY (Make sure this starts with AIza...)
-    const GEMINI_API_KEY = AIzaSyBVjErp0PcSntyosHi71_WoiE5k6pStuDw; 
-
-    // Safety check: Did you replace the text?
-    if (GEMINI_API_KEY === AIzaSyBVjErp0PcSntyosHi71_WoiE5k6pStuDw) {
-        alert("STOP: You forgot to paste your API Key from Google AI Studio into the code!");
-        return;
-    }
+    // Fixed: Added quotes around the API key
+    const GEMINI_API_KEY = 'AIzaSyBVjErp0PcSntyosHi71_WoiE5k6pStuDw'; 
 
     btn.innerText = "Processing...";
     btn.disabled = true;
@@ -53,13 +47,12 @@ async function askAI() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: "Analyze these symptoms: " + input }] }]
+                contents: [{ parts: [{ text: "Analyze these symptoms briefly: " + input }] }]
             })
         });
 
         const data = await response.json();
 
-        // 3. Check if Google sent an error back
         if (data.error) {
             alert("Google Error: " + data.error.message);
             responseDiv.innerText = "Error: " + data.error.message;
